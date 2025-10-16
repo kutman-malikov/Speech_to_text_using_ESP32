@@ -49,8 +49,9 @@ git clone https://github.com/kutman-malikov/esp32-speech-to-text.git
 ## Project Structure
 
 ```
-/src          # Main project code
-/include      # Header files and configuration
+/firmware     # Сode 
+/hardware     # CAD files, wiring diagrams, 3D models.
+/docs         # Documentation, diagrams, charts, protocol descriptions.
 /lib          # External libraries
 README.md     # Project description
 ```
