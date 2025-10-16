@@ -1,0 +1,23 @@
+# Build folders
+build/
+.pio/
+.arduino_build_*/
+dist/
+
+# Compiled binaries
+*.bin
+*.elf
+*.hex
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+
+# Logs and temp
+*.log
+*.tmp
+
+# System files
+.DS_Store
+Thumbs.db
