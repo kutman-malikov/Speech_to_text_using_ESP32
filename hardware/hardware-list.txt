@@ -1,0 +1,9 @@
+Here will be written the list of components used in the project.
+
+Microcontroller: ESP 32 Wroom devkit (38 pins).
+Display: 3.2' TFT SPI 240*320 v2.0
+Microphone: INMP441
+Button 1pc
+Breadboard large 1pc
+Jumperwires 
+Resistors
