@@ -1,12 +1,17 @@
 #include "Arduino.h"
 
 void setup() {
-  // put your setup code here, to run once:
+  // Настройка последовательного порта для отладки и вывода текста в Serial Monitor.
+  // Serial.begin(115200) устанавливает скорость передачи 115200 бод.
   Serial.begin(115200);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // Отправляет строку "Hello world" на последовательный порт.
+  // На компьютере это можно увидеть в Serial Monitor (тот же baud rate).
   Serial.println("Hello world");
+
+  // Приостанавливает выполнение программы на 500 миллисекунд (0.5 секунды),
+  // поэтому сообщение выводится примерно два раза в секунду.
   delay(500);
 }
