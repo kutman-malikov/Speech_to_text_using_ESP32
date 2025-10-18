@@ -2,21 +2,37 @@
 #define WIFIFUNC_H
 
 #include <WiFi.h>
+#include <vector>
+#include <string>
 
 class WiFiFunc {
 public:
-    // Инициализация Wi-Fi и подключение
-    void connect(const char* ssid, const char* password);
+    // Добавление сетей
+    void addNetwork(const char* ssid, const char* password);
 
-    // Проверка соединения
+    // Подключение к WiFi
+    void connect();
+
+    // Проверка подключения
     bool isConnected();
 
-    // Получение IP-адреса
+    // Получить IP
     String getIP();
 
+    // Запуск фонового потока мониторинга
+    void startMonitorTask();
+
 private:
-    // Внутренний метод для ожидания подключения
-    void waitForConnection();
+    struct Network {
+        String ssid;
+        String password;
+    };
+
+    std::vector<Network> networks;
+    TaskHandle_t monitorTaskHandle = NULL;
+
+    void monitorConnection();   // функция потока
+    static void monitorTask(void* parameter);  // статическая оболочка
 };
 
 #endif

@@ -1,27 +1,22 @@
-#include "Arduino.h"
+#include <Arduino.h>
 #include "modules/wififunc.h"
 
-WiFiFunc wifi;  // создаем объект Wi-Fi
-
-// ⚠️ Замени на свои реальные данные
-const char* SSID = "Astronet";
-const char* PASSWORD = "20052007.";
+WiFiFunc wifi;
 
 void setup() {
     Serial.begin(115200);
     delay(1000);
 
-    wifi.connect(SSID, PASSWORD);
+    // Добавляем несколько Wi-Fi сетей
+    wifi.addNetwork("Asronet", "20052007.");
+    wifi.addNetwork("MobileHotspot", "myhotspot123");
+    wifi.addNetwork("astronet", "20052007.");
 
-    if (wifi.isConnected()) {
-        Serial.println("Connected successfully!");
-        Serial.print("Device IP: ");
-        Serial.println(wifi.getIP());
-    } else {
-        Serial.println("Failed to connect to Wi-Fi.");
-    }
+    wifi.connect();             // пробуем подключиться
+    wifi.startMonitorTask();    // запускаем фоновый поток
 }
 
 void loop() {
-    // Здесь пока ничего
+    // тут может выполняться логика распознавания речи, отправка данных и т.д.
+    delay(5000);
 }
