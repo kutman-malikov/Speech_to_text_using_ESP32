@@ -1,17 +1,27 @@
 #include "Arduino.h"
+#include "modules/wififunc.h"
+
+WiFiFunc wifi;  // создаем объект Wi-Fi
+
+// ⚠️ Замени на свои реальные данные
+const char* SSID = "Astronet";
+const char* PASSWORD = "20052007.";
 
 void setup() {
-  // Настройка последовательного порта для отладки и вывода текста в Serial Monitor.
-  // Serial.begin(115200) устанавливает скорость передачи 115200 бод.
-  Serial.begin(115200);
+    Serial.begin(115200);
+    delay(1000);
+
+    wifi.connect(SSID, PASSWORD);
+
+    if (wifi.isConnected()) {
+        Serial.println("Connected successfully!");
+        Serial.print("Device IP: ");
+        Serial.println(wifi.getIP());
+    } else {
+        Serial.println("Failed to connect to Wi-Fi.");
+    }
 }
 
 void loop() {
-  // Отправляет строку "Hello world" на последовательный порт.
-  // На компьютере это можно увидеть в Serial Monitor (тот же baud rate).
-  Serial.println("Hello world");
-
-  // Приостанавливает выполнение программы на 500 миллисекунд (0.5 секунды),
-  // поэтому сообщение выводится примерно два раза в секунду.
-  delay(500);
+    // Здесь пока ничего
 }
