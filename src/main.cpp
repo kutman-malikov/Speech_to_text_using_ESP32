@@ -5,12 +5,10 @@ WiFiFunc wifi;
 
 void setup() {
     Serial.begin(115200);
-    delay(1000);
-
     // Добавляем несколько Wi-Fi сетей
-    wifi.addNetwork("Asronet", "YOUR_WIFI_PASSWORD");
-    wifi.addNetwork("MobileHotspot", "myhotspot123");
     wifi.addNetwork("YOUR_WIFI_SSID", "YOUR_WIFI_PASSWORD");
+    // wifi.addNetwork("Asronet", "YOUR_WIFI_PASSWORD");
+    // wifi.addNetwork("MobileHotspot", "myhotspot123");
 
     wifi.connect();             // пробуем подключиться
     wifi.startMonitorTask();    // запускаем фоновый поток
