@@ -8,9 +8,9 @@ class MicrophoneHandler {
 public:
     MicrophoneHandler(int sdPin, int wsPin, int sckPin, int buttonPin);
 
-    void begin();         // инициализация I²S и кнопки
-    void update();        // вызывать в loop()
-    bool isRecording();   // статус записи
+    void begin();
+    void update();
+    bool isRecording();
 
 private:
     int _sdPin, _wsPin, _sckPin, _buttonPin;
