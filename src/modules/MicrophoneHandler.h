@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <driver/i2s.h>
+#include <functional>
 
 class MicrophoneHandler {
 public:
@@ -12,13 +13,16 @@ public:
     void update();
     bool isRecording();
 
-private:
-    int _sdPin, _wsPin, _sckPin, _buttonPin;
-    bool _recording = false;
-
     void startRecording();
     void stopRecording();
     void readAudio();
+
+    // callback для передачи сэмплов (используется рекордером)
+    std::function<void(int16_t)> _onSample;
+
+private:
+    int _sdPin, _wsPin, _sckPin, _buttonPin;
+    bool _recording = false;
 };
 
 #endif
