@@ -4,13 +4,13 @@
 #include "modules/AudioRecorder.h"
 #include "modules/ElevenLabsSTT.h"
 #include "modules/wififunc.h"
+#include "secrets.h"
 
 #define SAMPLE_RATE 16000
-#define API_KEY "sk_5f808c3a868f9f838539c65ec4fb3604817a3ae04ee46463"
 
 MicrophoneHandler mic(GPIO_NUM_33, GPIO_NUM_25, GPIO_NUM_32, GPIO_NUM_34);
 AudioRecorder recorder(SAMPLE_RATE, "/record.wav");
-ElevenLabsSTT stt(API_KEY);
+ElevenLabsSTT stt(ELEVENLABS_API_KEY);
 WiFiFunc wifi;
 WebServer server(80);
 
@@ -24,8 +24,7 @@ void handleRoot() {
     html += F("<h2>Speech-to-Text Recorder</h2>");
     if (LittleFS.exists("/record.wav")) {
         File f = LittleFS.open("/record.wav", "r");
-        size_t sz = f.size();
-        f.close();
+        size_t sz = f.size(); f.close();
         html += F("<p>Последняя запись: <b>");
         html += String(sz);
         html += F("</b> bytes</p>");
@@ -56,11 +55,10 @@ void handleWav() {
 void setup() {
     Serial.begin(115200);
     delay(500);
-
     Serial.println("[System] Speech-to-Text with Web Access");
 
     // Wi-Fi
-    wifi.addNetwork("astronet", "20052007.");
+    wifi.addNetwork(WIFI_SSID, WIFI_PASSWORD);
     wifi.connect();
     wifi.startMonitorTask();
 
@@ -82,16 +80,41 @@ void setup() {
 // ──────────────────────────────
 void loop() {
     server.handleClient();
-
     mic.update();
-    bool pressed = mic.isRecording();
-    static bool prev = false;
 
-    if (pressed && !prev) {
-        recorder.start();
+    static bool prev = false;
+    static unsigned long debounceTimer = 0;
+    static bool debounceState = false;
+    static unsigned long releaseTime = 0;
+    static bool postRecord = false;
+
+    bool rawPressed = mic.isRecording();
+
+    // --- антидребезг 20 мс ---
+    if (rawPressed != debounceState) {
+        debounceTimer = millis();
+        debounceState = rawPressed;
     }
-    if (!pressed && prev) {
+    if (millis() - debounceTimer < 20) return;
+
+    // --- начало записи ---
+    if (debounceState && !prev && !postRecord) {
+        recorder.start();
+        Serial.println("[System] Recording started...");
+    }
+
+    // --- кнопка отпущена ---
+    if (!debounceState && prev) {
+        releaseTime = millis();
+        postRecord = true;
+        Serial.println("[System] Button released, finishing...");
+    }
+
+    // --- плавное завершение ---
+    if (postRecord && (millis() - releaseTime) > 100) {
         recorder.stop();
+        postRecord = false;
+        Serial.println("[System] Recording stopped.");
         Serial.println("[System] Uploading to ElevenLabs...");
         String text = stt.transcribeFile("/record.wav");
         if (text.length()) {
@@ -101,15 +124,21 @@ void loop() {
             Serial.println("[Result] No transcription received.");
         }
     }
-    prev = pressed;
 
+    prev = debounceState;
+
+    // --- запись данных ---
     if (recorder.isRecording()) {
         const int BUF = 256;
         int32_t buf[BUF];
         size_t bytesRead = 0;
-        if (i2s_read(I2S_NUM_0, buf, sizeof(buf), &bytesRead, 1000) == ESP_OK && bytesRead > 0)
-            recorder.writeSamples(buf, bytesRead / sizeof(int32_t));
+        esp_err_t r = i2s_read(I2S_NUM_0, buf, sizeof(buf), &bytesRead, 1000);
+        if (r == ESP_OK && bytesRead > 0) {
+            static unsigned long startSkip = millis();
+            // пропускаем первые 100 мс — убираем щелчок старта
+            if (millis() - startSkip > 100)
+                recorder.writeSamples(buf, bytesRead / sizeof(int32_t));
+        }
     }
-
     delay(1);
 }
