@@ -49,9 +49,9 @@ void DisplayHandler::showBootStatus(const String& msg) {
     tft.println(msg);
     
     _bootLineY += 22;
-    if (_bootLineY > 200) {
-        _bootLineY = 85;
-        tft.fillRect(20, 85, 280, 140, ILI9341_BLACK);
+    if (_bootLineY > 200 && msg != "System Ready!") {
+        _bootLineY = 135;
+        tft.fillRect(0, 135, 240, 185, ILI9341_BLACK);
     }
 }
 

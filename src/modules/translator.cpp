@@ -1,4 +1,4 @@
-#include "modules/Translator.h"
+#include "modules/translator.h"
 #include <ArduinoJson.h>
 
 Translator::Translator(const char* apiKey)
