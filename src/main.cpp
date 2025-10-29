@@ -2,6 +2,7 @@
 #include <WebServer.h>
 #include "modules/MicrophoneHandler.h"
 #include "modules/AudioRecorder.h"
+#include "modules/DisplayHandler.h"  // ← ДОБАВЛЕНО
 #include "modules/ElevenLabsSTT.h"
 #include "modules/wififunc.h"
 #include "secrets.h"
@@ -9,7 +10,13 @@
 #define SAMPLE_RATE 16000
 #define WAV_PATH "/record.wav"
 
+// Пины для дисплея (аппаратный SPI: MOSI=23, SCK=18, MISO=19)
+#define TFT_CS   15  // ← ДОБАВЛЕНО
+#define TFT_DC   2   // ← ДОБАВЛЕНО
+#define TFT_RST  4   // ← ДОБАВЛЕНО
+
 // === Объекты ===
+DisplayHandler display(TFT_CS, TFT_DC, TFT_RST);  // ← ДОБАВЛЕНО
 MicrophoneHandler mic(GPIO_NUM_33, GPIO_NUM_25, GPIO_NUM_32, GPIO_NUM_34);
 AudioRecorder recorder(SAMPLE_RATE, WAV_PATH);
 ElevenLabsSTT stt(ELEVENLABS_API_KEY);
@@ -61,30 +68,58 @@ void handleWav() {
 void setup() {
     Serial.begin(115200);
     delay(500);
+    Serial.println("\n[System] Speech-to-Text with Display");
 
-    Serial.println("[System] Speech-to-Text with Web Access (Claude-style clean)");
+    // ═══ 1. Инициализация дисплея ═══
+    display.begin();  // ← ДОБАВЛЕНО
+    delay(300);
 
-    // --- Wi-Fi ---
+    // ═══ 2. Wi-Fi ═══
+    display.showBootStatus("WiFi connecting...");  // ← ДОБАВЛЕНО
     wifi.addNetwork(WIFI_SSID, WIFI_PASSWORD);
     wifi.connect();
     wifi.startMonitorTask();
+    
+    if (WiFi.status() == WL_CONNECTED) {
+        display.showBootStatus("WiFi OK");  // ← ДОБАВЛЕНО
+    } else {
+        display.showBootStatus("WiFi FAILED!");  // ← ДОБАВЛЕНО
+    }
+    delay(300);
 
-    // --- Модули ---
+    // ═══ 3. Микрофон ═══
+    display.showBootStatus("Init microphone...");  // ← ДОБАВЛЕНО
     mic.begin();
-    recorder.begin();
+    display.showBootStatus("Mic OK");  // ← ДОБАВЛЕНО
+    delay(300);
 
-    // --- Callback: микрофон → рекордер ---
+    // ═══ 4. Рекордер ═══
+    display.showBootStatus("Init recorder...");  // ← ДОБАВЛЕНО
+    recorder.begin();
+    display.showBootStatus("Recorder OK");  // ← ДОБАВЛЕНО
+    delay(300);
+
+    // ═══ 5. Callback: микрофон → рекордер ═══
     mic._onSample = [&](int16_t sample) {
         if (recorder.isRecording()) recorder.writeSample(sample);
     };
 
-    // --- Веб-сервер ---
+    // ═══ 6. Веб-сервер ═══
+    display.showBootStatus("Starting server...");  // ← ДОБАВЛЕНО
     server.on("/", handleRoot);
     server.on(WAV_PATH, handleWav);
     server.begin();
+    display.showBootStatus("Server OK");  // ← ДОБАВЛЕНО
+    delay(300);
 
+    display.showBootStatus("System Ready!");  // ← ДОБАВЛЕНО
     Serial.println("[System] Ready. Hold button to record.");
     Serial.println("[Web] Open http://" + WiFi.localIP().toString());
+    
+    delay(1500);
+    
+    // ═══ 7. Переход в главный интерфейс ═══
+    display.initMainInterface();  // ← ДОБАВЛЕНО
 }
 
 // ──────────────────────────────
@@ -112,6 +147,8 @@ void loop() {
     // --- начало записи ---
     if (debounceState && !prev && !postRecord) {
         recorder.start();
+        display.showStatusBar("Recording", ILI9341_RED);  // ← ДОБАВЛЕНО
+        display.showTranscriptionText("Listening...\nSpeak now.");  // ← ДОБАВЛЕНО
         Serial.println("[System] Recording started...");
     }
 
@@ -126,14 +163,22 @@ void loop() {
     if (postRecord && (millis() - releaseTime) > 100) {
         recorder.stop();
         postRecord = false;
+        
+        display.showStatusBar("Processing...", ILI9341_YELLOW);  // ← ДОБАВЛЕНО
+        display.showTranscriptionText("Processing audio...\nUploading to ElevenLabs...");  // ← ДОБАВЛЕНО
         Serial.println("[System] Recording stopped.");
 
         Serial.println("[System] Uploading to ElevenLabs...");
         String text = stt.transcribeFile(WAV_PATH);
+        
+        display.showStatusBar("Ready", ILI9341_GREEN);  // ← ДОБАВЛЕНО
+        
         if (text.length()) {
+            display.showTranscriptionText(text);  // ← ДОБАВЛЕНО
             Serial.println("[Result] Transcription:");
             Serial.println(text);
         } else {
+            display.showTranscriptionText("No transcription received.\nPlease try again.");  // ← ДОБАВЛЕНО
             Serial.println("[Result] No transcription received.");
         }
     }

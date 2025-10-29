@@ -18,31 +18,33 @@ void DisplayHandler::begin() {
     }
     
     tft.begin();
-    tft.setRotation(1);  // 320x240 landscape
+    tft.setRotation(0);  // 240x320 portrait (пины внизу)
     tft.fillScreen(ILI9341_BLACK);
     delay(300);
     
     // Заголовок загрузки
     tft.setTextSize(3);
     tft.setTextColor(ILI9341_CYAN);
-    tft.setCursor(60, 20);
-    tft.println("ESP32 STT");
+    tft.setCursor(30, 30);
+    tft.println("ESP32");
+    tft.setCursor(50, 60);
+    tft.println("STT");
     
     tft.setTextSize(1);
     tft.setTextColor(ILI9341_WHITE);
-    tft.setCursor(70, 50);
+    tft.setCursor(20, 100);
     tft.println("Speech-to-Text System");
     
-    tft.drawFastHLine(20, 70, 280, ILI9341_BLUE);
+    tft.drawFastHLine(20, 120, 200, ILI9341_BLUE);
     
-    _bootLineY = 85;
+    _bootLineY = 135;
     Serial.println("[Display] OK");
 }
 
 void DisplayHandler::showBootStatus(const String& msg) {
     tft.setTextSize(2);
     tft.setTextColor(ILI9341_GREEN, ILI9341_BLACK);
-    tft.setCursor(25, _bootLineY);
+    tft.setCursor(15, _bootLineY);
     tft.print("> ");
     tft.println(msg);
     
@@ -54,7 +56,7 @@ void DisplayHandler::showBootStatus(const String& msg) {
 }
 
 void DisplayHandler::showStatusBar(const String& state, uint16_t color) {
-    tft.fillRect(0, 0, 320, 60, color);
+    tft.fillRect(0, 0, 240, 60, color);
     tft.setTextSize(3);
     tft.setTextColor(ILI9341_WHITE, color);
     
@@ -62,16 +64,15 @@ void DisplayHandler::showStatusBar(const String& state, uint16_t color) {
     int16_t x1, y1;
     uint16_t w, h;
     tft.getTextBounds(state, 0, 0, &x1, &y1, &w, &h);
-    int x = (320 - w) / 2;
+    int x = (240 - w) / 2;
     
     tft.setCursor(x, 18);
     tft.println(state);
 }
 
 void DisplayHandler::showTranscriptionText(const String& text) {
-    tft.fillRect(0, 65, 320, 175, ILI9341_BLACK);
-    tft.drawRect(5, 65, 310, 170, ILI9341_DARKGREY);
-    
+    tft.fillRect(0, 65, 230, 175, ILI9341_BLACK);
+    tft.drawRect(5, 65, 230, 250, ILI9341_DARKGREY);
     tft.setTextSize(2);
     tft.setTextColor(ILI9341_WHITE, ILI9341_BLACK);
     
@@ -124,8 +125,8 @@ void DisplayHandler::showTranscriptionText(const String& text) {
 
 void DisplayHandler::initMainInterface() {
     clearScreen();
-    showStatusBar("Hold button to record", ILI9341_GREEN);
-    showTranscriptionText("Ready to record...\nPress and hold button.");
+    showStatusBar("Ready", ILI9341_GREEN);
+    showTranscriptionText("Ready to record...\nPress the button \nto start.");
 }
 
 void DisplayHandler::clearScreen() {
