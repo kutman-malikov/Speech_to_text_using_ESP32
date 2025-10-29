@@ -1,7 +1,90 @@
 #include "modules/ElevenLabsSTT.h"
 #include <ArduinoJson.h>
+#include <HTTPClient.h>
 
 ElevenLabsSTT::ElevenLabsSTT(const char *apiKey) : _apiKey(apiKey) {}
+
+// Функция перевода через LibreTranslate (бесплатный API)
+String translateToEnglish(const String& text, const String& sourceLang) {
+    if (text.length() == 0) return "";
+    
+    // Если текст уже на английском (латиница), не переводим
+    bool isLatin = true;
+    for (unsigned int i = 0; i < text.length(); i++) {
+        if ((unsigned char)text[i] > 127) {
+            isLatin = false;
+            break;
+        }
+    }
+    if (isLatin) {
+        Serial.println("[Translate] Text is already in Latin, skipping");
+        return text;
+    }
+    
+    HTTPClient http;
+    
+    // Используем публичный LibreTranslate сервер
+    String url = "https://libretranslate.com/translate";
+    
+    Serial.println("[Translate] Translating to English via LibreTranslate...");
+    
+    if (!http.begin(url)) {
+        Serial.println("[Translate] Failed to connect");
+        return text;
+    }
+    
+    http.addHeader("Content-Type", "application/json");
+    http.setTimeout(15000);
+    
+    // Преобразуем язык "rus" -> "ru"
+    String lang = sourceLang;
+    if (lang == "rus") lang = "ru";
+    else if (lang == "eng") lang = "en";
+    else if (lang.length() > 2) lang = lang.substring(0, 2);
+    
+    // Создаем JSON тело запроса
+    DynamicJsonDocument requestDoc(2048);
+    requestDoc["q"] = text;
+    requestDoc["source"] = lang;
+    requestDoc["target"] = "en";
+    requestDoc["format"] = "text";
+    
+    String requestBody;
+    serializeJson(requestDoc, requestBody);
+    
+    Serial.printf("[Translate] Request: %s\n", requestBody.c_str());
+    
+    int code = http.POST(requestBody);
+    String response = http.getString();
+    http.end();
+    
+    Serial.printf("[Translate] HTTP code: %d\n", code);
+    Serial.printf("[Translate] Response: %s\n", response.c_str());
+    
+    if (code != 200) {
+        Serial.printf("[Translate] HTTP error: %d\n", code);
+        return text;
+    }
+    
+    // Парсинг ответа
+    DynamicJsonDocument responseDoc(2048);
+    DeserializationError error = deserializeJson(responseDoc, response);
+    
+    if (error) {
+        Serial.printf("[Translate] JSON parse error: %s\n", error.c_str());
+        return text;
+    }
+    
+    if (!responseDoc.containsKey("translatedText")) {
+        Serial.println("[Translate] No translatedText in response");
+        return text;
+    }
+    
+    String translated = responseDoc["translatedText"].as<String>();
+    Serial.printf("[Translate] SUCCESS! Translated: %s\n", translated.c_str());
+    
+    return translated;
+}
 
 String ElevenLabsSTT::transcribeFile(const char *path)
 {
@@ -19,6 +102,8 @@ String ElevenLabsSTT::transcribeFile(const char *path)
     }
 
     size_t fileSize = file.size();
+    Serial.printf("[STT] File size: %d bytes\n", fileSize);
+    
     if (fileSize > 500000)
     {
         Serial.println("[STT] File too large (>500KB)");
@@ -53,21 +138,27 @@ String ElevenLabsSTT::transcribeFile(const char *path)
 
     String bodyStart =
         "--" + boundary + "\r\n"
-                          "Content-Disposition: form-data; name=\"model_id\"\r\n\r\n"
-                          "scribe_v1\r\n"
-                          "--" +
-        boundary + "\r\n"
-                   "Content-Disposition: form-data; name=\"languages\"\r\n\r\n"
-                   "ru,tr,ar,zh,fr,en,ja\r\n" // ✅ ограничение 7 языков
-                   "--" +
-        boundary + "\r\n"
-                   "Content-Disposition: form-data; name=\"file\"; filename=\"audio.wav\"\r\n"
-                   "Content-Type: audio/wav\r\n\r\n";
+        "Content-Disposition: form-data; name=\"model_id\"\r\n\r\n"
+        "scribe_v1\r\n"
+        "--" + boundary + "\r\n"
+        "Content-Disposition: form-data; name=\"language\"\r\n\r\n"
+        "auto\r\n"
+        "--" + boundary + "\r\n"
+        "Content-Disposition: form-data; name=\"file\"; filename=\"audio.wav\"\r\n"
+        "Content-Type: audio/wav\r\n\r\n";
 
     String bodyEnd = "\r\n--" + boundary + "--\r\n";
     size_t totalSize = bodyStart.length() + fileSize + bodyEnd.length();
 
     uint8_t *body = (uint8_t *)malloc(totalSize);
+    if (!body)
+    {
+        Serial.println("[STT] Failed to allocate request body");
+        free(data);
+        http.end();
+        return "";
+    }
+    
     memcpy(body, bodyStart.c_str(), bodyStart.length());
     memcpy(body + bodyStart.length(), data, fileSize);
     memcpy(body + bodyStart.length() + fileSize, bodyEnd.c_str(), bodyEnd.length());
@@ -81,16 +172,19 @@ String ElevenLabsSTT::transcribeFile(const char *path)
     http.end();
 
     Serial.printf("[STT] HTTP %d\n", code);
-    Serial.println("[STT] Response:");
-    Serial.println(response);
 
     if (code != 200)
-        return "";
-
-    DynamicJsonDocument doc(2048);
-    if (deserializeJson(doc, response) != DeserializationError::Ok)
     {
-        Serial.println("[STT] JSON parse failed");
+        Serial.printf("[STT] HTTP error: %d\n", code);
+        return "";
+    }
+
+    DynamicJsonDocument doc(4096);
+    DeserializationError error = deserializeJson(doc, response);
+    
+    if (error)
+    {
+        Serial.printf("[STT] JSON parse failed: %s\n", error.c_str());
         return "";
     }
 
@@ -101,6 +195,17 @@ String ElevenLabsSTT::transcribeFile(const char *path)
     }
 
     String text = doc["text"].as<String>();
-    Serial.printf("[STT] Recognized text: %s\n", text.c_str());
-    return text;
+    String langCode = "auto";
+    
+    if (doc.containsKey("language_code")) {
+        langCode = doc["language_code"].as<String>();
+        Serial.printf("[STT] Detected language: %s\n", langCode.c_str());
+    }
+    
+    Serial.printf("[STT] Original text: %s\n", text.c_str());
+    
+    // Переводим на английский
+    String translatedText = translateToEnglish(text, langCode);
+    
+    return translatedText;
 }
