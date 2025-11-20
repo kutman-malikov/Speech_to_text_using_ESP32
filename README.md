@@ -1,66 +1,138 @@
-# ESP32 Speech-to-Text
+# 🗣️ Speech-to-Text Translation System using ESP32
 
-A project for ESP32 to convert speech to text using a microphone and a cloud service (e.g., ElevenLabs).
+A standalone embedded system that records speech, sends it to the **ElevenLabs Speech-to-Text API**, translates the recognized text via **DeepL**, and displays the final translation on a **TFT display** — all powered by an **ESP32** microcontroller.
 
-## Description
+---
 
-This project allows ESP32 to capture audio from a microphone, process the signal, and send it to a server for speech recognition. Suitable for voice interfaces, smart devices, and IoT projects.
+## 📘 Overview
 
-## Features
+This project shows how a low-cost microcontroller can perform multilingual speech recognition and translation using local audio recording and cloud-based AI services. The system captures audio, saves it as a WAV file, uploads it for recognition, obtains translated text, and presents the result to the user.
 
-* Supports INMP441 microphone
-* Real-time speech-to-text conversion
-* Integration with ElevenLabs API
-* Simple setup and modular architecture
+---
 
-## Requirements
+## ✨ Features
 
-* ESP32 (any compatible module)
-* INMP441 or similar microphone
-* Arduino IDE or PlatformIO
-* Wi-Fi connection
-* ElevenLabs API key
+- 🎤 I²S audio recording via **INMP441 microphone**  
+- 💾 Stores audio as **16-bit WAV** using **LittleFS**  
+- 🌐 Cloud recognition through **ElevenLabs STT API**  
+- 🌍 Multi-language translation through **DeepL**  
+- 🖥️ Displays translation on **ILI9341 TFT (SPI)**  
+- 📶 Continuous Wi-Fi monitoring using **FreeRTOS task**  
+- 🔊 Built-in **local web server** to download/listen to recordings
 
-## Installation
+---
 
-1. Clone the repository:
+## 🧩 Hardware Setup
 
-```bash
-git clone https://github.com/kutman-malikov/esp32-speech-to-text.git
+| Component | Function | ESP32 Pins |
+|----------|----------|------------|
+| **INMP441 Microphone** | I²S audio capture | SCK=32, WS=25, SD=33, L/R=GND |
+| **ILI9341 TFT Display** | Visual output | MOSI=23, MISO=19, SCK=18, CS=15, DC=2, RST=4 |
+| **Push Button** | Start/stop recording | GPIO34 (active-low) |
+| **Power** | USB 5 V | — |
+
+> All modules share a common GND.
+
+---
+
+## 🧠 Software Architecture
+
+Project uses a modular C++ structure under **PlatformIO**:
+
+| Module | Description |
+|--------|-------------|
+| `MicrophoneHandler` | Configures I²S, reads 32-bit samples, converts to 16-bit PCM |
+| `AudioRecorder` | Writes WAV to LittleFS and manages headers |
+| `WiFiFunc` | Handles Wi-Fi connection + FreeRTOS background monitoring |
+| `ElevenLabsSTT` | Uploads `/record.wav` for speech-to-text processing |
+| `Translator` | Sends recognized text to DeepL API and returns translation |
+| `DisplayHandler` | Handles all TFT output (states + final text) |
+| `main.cpp` | Controls recording, processing, translations, and flow |
+
+---
+
+## 🔄 System Flow
+
+```mermaid
+flowchart LR
+
+A[Start] --> B[Init Wi-Fi, Display, I2S]
+B --> C{Button Pressed?}
+C -->|Yes| D[Start Recording]
+C -->|No| C
+
+D --> E[Write 16-bit Samples to WAV]
+E --> F[Button Released]
+F --> G[Stop Recording]
+
+G --> H[Upload to ElevenLabs]
+H --> I[Receive Recognized Text]
+
+I --> J[Send to DeepL]
+J --> K[Receive Translation].
+
+K --> L[Display Translation]
+L --> M[Idle]
+M --> C
 ```
 
-2. Open the project in Arduino IDE or PlatformIO.
+---
 
-3. Install required libraries:
+## 🧪 Results
 
-* WiFi
-* HTTPClient
-* I2S (for INMP441)
+The system worked reliably during testing. Audio recording, cloud recognition, translation, and display output all functioned smoothly. Optimized I²S configuration ensured clean audio compatible with ElevenLabs. Wi-Fi remained stable thanks to FreeRTOS monitoring. The device consistently produced correct translations and responded quickly to user actions.
 
-4. Configure Wi-Fi and API key in `config.h` (create from `config_template.h`).
+---
 
-## Usage
+## 🧭 Future Improvements
 
-1. Connect ESP32 to your computer via USB.
-2. Upload the sketch to the board.
-3. Open Serial Monitor to see the recognized text.
-4. Speak into the microphone and watch the results in the console.
+- On-screen language selection  
+- Basic history of past translations  
+- Better error/status messages on the display
 
-## Project Structure
+---
+
+## 📂 Project Structure
 
 ```
-/firmware     # Сode 
-/hardware     # CAD files, wiring diagrams, 3D models.
-/docs         # Documentation, diagrams, charts, protocol descriptions.
-/lib          # External libraries
-README.md     # Project description
+Speech_to_text_ESP32/
+ ├── src/
+ │   ├── main.cpp
+ │   └── modules/
+ │       ├── AudioRecorder.*
+ │       ├── MicrophoneHandler.*
+ │       ├── WiFiFunc.*
+ │       ├── ElevenLabsSTT.*
+ │       ├── Translator.*
+ │       └── DisplayHandler.*
+ ├── include/
+ ├── lib/
+ ├── data/
+ ├── platformio.ini
+ └── README.md
 ```
 
-## License
+---
 
-MIT License — free to use, modify, and distribute.
+## 🔧 How to Build
 
-## Contact
+1. Install **PlatformIO** (VSCode extension recommended)  
+2. Clone the repository  
+3. Add your API keys to `include/secrets.h`:
+```cpp
+#define WIFI_SSID "..."
+#define WIFI_PASS "..."
+#define ELEVENLABS_API_KEY "..."
+#define DEEPL_API_KEY "..."
+```
+4. Connect your ESP32 board  
+5. Upload firmware  
+6. Open Serial Monitor @ **115200 baud**
 
-* Email: [kutman.engineer@gmail.com](mailto:kutman.engineer@gmail.com)
-* GitHub: [kutman-malikov](https://github.com/kutman-malikov)
+---
+
+## 📎 Author
+
+**Kutman Malikov**  
+Electrical and Electronics Engineering  
+Bahçeşehir Cyprus University
