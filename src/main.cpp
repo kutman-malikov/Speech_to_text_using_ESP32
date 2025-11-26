@@ -7,6 +7,7 @@
 #include "modules/wififunc.h"
 #include "modules/translator.h" // ✅ Новый модуль DeepL
 #include "secrets.h"
+#include "modules/LangCodeMapper.h"
 
 #define SAMPLE_RATE 16000
 #define WAV_PATH "/record.wav"
@@ -199,13 +200,14 @@ void loop()
         // шаг 1: распознавание речи
         String originalText = stt.transcribeFile(WAV_PATH);
         String translatedText = "";
+        String langDetected = elevenToDeepL(stt.lastLanguageDetected());
 
         // шаг 2: перевод через DeepL
         if (originalText.length())
         {
             display.showStatusBar("Translating...", ILI9341_CYAN);
             display.showTranscriptionText("Translating text via DeepL...");
-            translatedText = translator.translate(originalText, "EN", "AUTO");
+            translatedText = translator.translate(originalText, "EN-US", langDetected);
         }
 
         // шаг 3: отображение результата

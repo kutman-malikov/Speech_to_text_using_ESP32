@@ -9,6 +9,7 @@ class ElevenLabsSTT
 public:
     explicit ElevenLabsSTT(const char *apiKey);
     String transcribeFile(const char *path);
+    String lastLanguageDetected();
 
 private:
     const char *_apiKey;
