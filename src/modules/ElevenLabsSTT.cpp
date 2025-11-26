@@ -3,6 +3,8 @@
 #include <HTTPClient.h>
 #include <LittleFS.h>
 
+String langCode = "auto";
+
 ElevenLabsSTT::ElevenLabsSTT(const char *apiKey)
     : _apiKey(apiKey),
       _url("https://api.elevenlabs.io/v1/speech-to-text") {}
@@ -35,9 +37,9 @@ String ElevenLabsSTT::transcribeFile(const char *path)
         return "";
     }
 
-    if (fileSize > 500000)
+    if (fileSize > 70000)
     {
-        Serial.println("[STT] File too large (>500KB)");
+        Serial.println("[STT] File too large (>70KB)");
         file.close();
         return "";
     }
@@ -131,7 +133,6 @@ String ElevenLabsSTT::transcribeFile(const char *path)
     }
 
     String text = doc["text"].as<String>();
-    String langCode = "auto";
 
     if (doc.containsKey("language_code"))
     {
@@ -142,4 +143,7 @@ String ElevenLabsSTT::transcribeFile(const char *path)
     Serial.printf("[STT] Original text: %s\n", text.c_str());
 
     return text;
+}
+String ElevenLabsSTT::lastLanguageDetected() {
+    return langCode;
 }
