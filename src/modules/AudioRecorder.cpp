@@ -39,12 +39,26 @@ void AudioRecorder::stop() {
 
 bool AudioRecorder::isRecording() { return _recording; }
 
-// === Новый метод: запись одного 16-битного сэмпла ===
+// === Новый метод: запись одного 16-битного сэмпла с усилением ===
 void AudioRecorder::writeSample(int16_t s) {
     if (!_recording) return;
-    _file.write((uint8_t*)&s, sizeof(int16_t));
-    _dataBytes += 2;
+
+    // +20 dB ≈ ×10 по амплитуде
+    constexpr float GAIN = 10.0f;
+
+    // считаем во 32-битном, чтобы избежать переполнения при умножении
+    int32_t v = static_cast<int32_t>(s) * GAIN;
+
+    // клиппинг в диапазон int16_t
+    if (v > 32767) v = 32767;
+    else if (v < -32768) v = -32768;
+
+    int16_t amplified = static_cast<int16_t>(v);
+
+    _file.write((uint8_t*)&amplified, sizeof(int16_t));
+    _dataBytes += sizeof(int16_t);
 }
+
 
 // === Заголовок WAV ===
 void AudioRecorder::writeWavHeader(File& f, uint32_t dataSize) {
