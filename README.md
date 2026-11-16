@@ -118,10 +118,10 @@ Speech_to_text_ESP32/
 
 1. Install **PlatformIO** (VSCode extension recommended)  
 2. Clone the repository  
-3. Add your API keys to `include/secrets.h`:
+3. Copy `include/secrets.example.h` to `include/secrets.h` and fill in your Wi-Fi credentials and API keys (`secrets.h` is git-ignored):
 ```cpp
 #define WIFI_SSID "..."
-#define WIFI_PASS "..."
+#define WIFI_PASSWORD "..."
 #define ELEVENLABS_API_KEY "..."
 #define DEEPL_API_KEY "..."
 ```
